@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:clinicaltrials.gov)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(zip:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
