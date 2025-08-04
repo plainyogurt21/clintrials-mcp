@@ -21,6 +21,8 @@ from mcp.types import (
     ListToolsRequest,
     TextContent,
     Tool,
+    ServerCapabilities,
+    ToolsCapability,
 )
 from pydantic import BaseModel, Field
 
@@ -440,9 +442,8 @@ async def main():
             InitializationOptions(
                 server_name="clinical-trials-server",
                 server_version="1.0.0",
-                capabilities=server.get_capabilities(
-                    notification_options=None,
-                    experimental_capabilities=None
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(listChanged=False)
                 )
             )
         )
@@ -451,6 +452,7 @@ async def main():
 def cli_main():
     """CLI entry point for the server"""
     import asyncio
+    import traceback
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
@@ -458,6 +460,7 @@ def cli_main():
         sys.exit(0)
     except Exception as e:
         print(f"Error starting server: {e}", file=sys.stderr)
+        print(f"Full traceback: {traceback.format_exc()}", file=sys.stderr)
         sys.exit(1)
 
 

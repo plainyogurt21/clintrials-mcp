@@ -5,7 +5,9 @@
       "Bash(mkdir:*)",
       "Bash(zip:*)",
       "Bash(rm:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python mcp_server.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"import mcp; print(mcp.__version__)\")"
     ],
     "deny": []
   }

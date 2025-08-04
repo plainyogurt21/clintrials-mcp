@@ -1,28 +1,79 @@
 {
+  "dxt_version": "0.1",
   "name": "clintrials-mcp",
+  "display_name": "Clinical Trials MCP Server",
   "version": "1.0.0",
   "description": "MCP server for accessing and analyzing clinical trials data from ClinicalTrials.gov",
-  "main": "mcp_server.py",
-  "type": "module",
-  "bin": {
-    "clintrials-mcp": "./bin/clintrials-mcp"
+  "long_description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to access clinical trials data from ClinicalTrials.gov. Features include searching trials by condition, intervention, sponsor, and NCT IDs, retrieving detailed trial information, analyzing trial phases, and generating field statistics.",
+  "author": {
+    "name": "Clinical Trials MCP Team",
+    "url": "https://github.com/yourusername/clintrials-mcp"
   },
-  "scripts": {
-    "start": "python mcp_server.py",
-    "test": "python test_server.py"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/clintrials-mcp.git"
   },
+  "homepage": "https://github.com/yourusername/clintrials-mcp",
+  "documentation": "https://github.com/yourusername/clintrials-mcp/blob/main/README.md",
+  "support": "https://github.com/yourusername/clintrials-mcp/issues",
+  "server": {
+    "type": "python",
+    "entry_point": "mcp_server.py",
+    "mcp_config": {
+      "command": "/Users/adusubramanian/clintrials-mcp/.venv/bin/python",
+      "args": ["${__dirname}/mcp_server.py"],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "search_trials_by_condition",
+      "description": "Search clinical trials by medical condition"
+    },
+    {
+      "name": "search_trials_by_intervention",
+      "description": "Search clinical trials by intervention or treatment"
+    },
+    {
+      "name": "search_trials_by_sponsor",
+      "description": "Search clinical trials by sponsor organization"
+    },
+    {
+      "name": "search_trials_by_nct_ids",
+      "description": "Search clinical trials by NCT ID numbers"
+    },
+    {
+      "name": "search_trials_combined",
+      "description": "Search clinical trials with combined filters"
+    },
+    {
+      "name": "get_trial_details",
+      "description": "Get detailed information for specific clinical trials"
+    },
+    {
+      "name": "analyze_trial_phases",
+      "description": "Analyze distribution of clinical trial phases"
+    },
+    {
+      "name": "get_field_statistics",
+      "description": "Get statistics for specific fields in clinical trials data"
+    }
+  ],
   "keywords": [
     "mcp",
-    "clinical-trials", 
-    "medical-research"
+    "clinical-trials",
+    "medical-research",
+    "pharmaceuticals",
+    "healthcare",
+    "drug-development",
+    "clinical-data"
   ],
-  "author": "Clinical Trials MCP Team",
   "license": "MIT",
-  "mcp": {
-    "server": {
-      "command": "python",
-      "args": ["mcp_server.py"],
-      "env": {}
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "python": ">=3.8"
     }
   }
 }
