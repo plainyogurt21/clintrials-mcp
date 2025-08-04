@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""
+Clinical Trials MCP Server Executable
+"""
+
+import os
+import sys
+import subprocess
+
+def main():
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    server_path = os.path.join(os.path.dirname(script_dir), 'mcp_server.py')
+    
+    # Run the MCP server
+    try:
+        subprocess.run([sys.executable, server_path] + sys.argv[1:])
+    except KeyboardInterrupt:
+        print("\nShutting down Clinical Trials MCP Server...")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

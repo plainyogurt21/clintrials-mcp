@@ -448,6 +448,18 @@ async def main():
         )
 
 
-if __name__ == "__main__":
+def cli_main():
+    """CLI entry point for the server"""
     import asyncio
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nShutting down Clinical Trials MCP Server...")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Error starting server: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    cli_main()

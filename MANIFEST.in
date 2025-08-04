@@ -1,0 +1,8 @@
+include README.md
+include requirements.txt
+include clinicaltrials.dxt
+include package.json
+include install.sh
+include install.bat
+recursive-include bin *
+include setup.py

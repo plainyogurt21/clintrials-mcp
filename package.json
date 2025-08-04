@@ -1,0 +1,70 @@
+{
+  "name": "clintrials-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for accessing and analyzing clinical trials data from ClinicalTrials.gov",
+  "main": "mcp_server.py",
+  "bin": {
+    "clintrials-mcp": "./bin/clintrials-mcp"
+  },
+  "scripts": {
+    "start": "python mcp_server.py",
+    "test": "python test_server.py",
+    "install-deps": "pip install -r requirements.txt"
+  },
+  "keywords": [
+    "mcp",
+    "clinical-trials",
+    "medical-research",
+    "pharmaceuticals",
+    "healthcare",
+    "drug-development",
+    "clinical-data"
+  ],
+  "author": {
+    "name": "Clinical Trials MCP Team",
+    "email": "your-email@example.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/clintrials-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/clintrials-mcp/issues"
+  },
+  "homepage": "https://github.com/yourusername/clintrials-mcp#readme",
+  "engines": {
+    "python": ">=3.8"
+  },
+  "mcp": {
+    "server": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "env": {}
+    },
+    "tools": [
+      "search_trials_by_condition",
+      "search_trials_by_intervention", 
+      "search_trials_by_sponsor",
+      "search_trials_by_nct_ids",
+      "search_trials_combined",
+      "get_trial_details",
+      "analyze_trial_phases",
+      "get_field_statistics"
+    ]
+  },
+  "dependencies": {
+    "mcp": ">=1.0.0",
+    "requests": ">=2.31.0",
+    "pydantic": ">=2.0.0",
+    "typing-extensions": ">=4.0.0"
+  },
+  "files": [
+    "mcp_server.py",
+    "requirements.txt",
+    "README.md",
+    "clinicaltrials.dxt",
+    "bin/",
+    "setup.py"
+  ]
+}

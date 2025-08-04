@@ -1,0 +1,113 @@
+{
+  "name": "clinicaltrials",
+  "version": "1.0.0",
+  "description": "Access and analyze clinical trials data from ClinicalTrials.gov",
+  "author": "Clinical Trials MCP Team",
+  "license": "MIT",
+  "homepage": "https://github.com/yourusername/clintrials-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/clintrials-mcp.git"
+  },
+  "categories": ["medical", "research", "data"],
+  "keywords": ["clinical-trials", "medical-research", "pharmaceuticals", "healthcare", "drug-development"],
+  "mcp": {
+    "server": {
+      "command": "python",
+      "args": ["-m", "clintrials_mcp.server"],
+      "env": {}
+    },
+    "capabilities": {
+      "tools": [
+        {
+          "name": "search_trials_by_condition",
+          "description": "Search clinical trials by medical condition(s)"
+        },
+        {
+          "name": "search_trials_by_intervention", 
+          "description": "Search clinical trials by intervention/treatment"
+        },
+        {
+          "name": "search_trials_by_sponsor",
+          "description": "Search clinical trials by sponsor/organization"
+        },
+        {
+          "name": "search_trials_by_nct_ids",
+          "description": "Retrieve specific clinical trials by NCT ID(s)"
+        },
+        {
+          "name": "search_trials_combined",
+          "description": "Search clinical trials using multiple criteria"
+        },
+        {
+          "name": "get_trial_details",
+          "description": "Get comprehensive details for a single clinical trial"
+        },
+        {
+          "name": "analyze_trial_phases",
+          "description": "Analyze the distribution of trial phases for given search criteria"
+        },
+        {
+          "name": "get_field_statistics",
+          "description": "Get statistical information about field values"
+        }
+      ]
+    }
+  },
+  "installation": {
+    "pip": [
+      "mcp>=1.0.0",
+      "requests>=2.31.0", 
+      "pydantic>=2.0.0",
+      "typing-extensions>=4.0.0"
+    ]
+  },
+  "config": {
+    "examples": [
+      {
+        "name": "basic",
+        "description": "Basic clinical trials server configuration",
+        "config": {
+          "mcpServers": {
+            "clinicaltrials": {
+              "command": "python",
+              "args": ["-m", "clintrials_mcp.server"],
+              "env": {}
+            }
+          }
+        }
+      }
+    ]
+  },
+  "documentation": {
+    "readme": "https://raw.githubusercontent.com/yourusername/clintrials-mcp/main/README.md",
+    "examples": [
+      {
+        "title": "Search for cancer trials",
+        "description": "Find clinical trials related to cancer research",
+        "code": "search_trials_by_condition({\"conditions\": [\"cancer\"], \"max_studies\": 10})"
+      },
+      {
+        "title": "Analyze trial phases",
+        "description": "Get statistical breakdown of trial phases for a condition",
+        "code": "analyze_trial_phases({\"conditions\": [\"diabetes\"], \"max_studies\": 100})"
+      },
+      {
+        "title": "Get trial details",
+        "description": "Retrieve comprehensive information about a specific trial",
+        "code": "get_trial_details({\"nct_id\": \"NCT04852770\"})"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": ["healthcare", "research", "clinical-trials", "pharmaceuticals", "medical-data"],
+    "compatibility": {
+      "claude-desktop": true,
+      "continue": true,
+      "other-mcp-clients": true
+    },
+    "data_sources": ["ClinicalTrials.gov API v2"],
+    "rate_limits": "Respects ClinicalTrials.gov API rate limits",
+    "privacy": "No personal data stored, all queries go directly to public ClinicalTrials.gov API"
+  }
+}
