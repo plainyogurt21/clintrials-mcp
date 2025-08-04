@@ -424,12 +424,14 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> CallToolResu
             raise ValueError(f"Unknown tool: {name}")
         
         return CallToolResult(
-            content=[TextContent(type="text", text=json.dumps(result, indent=2))]
+            content=[TextContent(type="text", text=json.dumps(result, indent=2))],
+            isError=False
         )
         
     except Exception as e:
         return CallToolResult(
-            content=[TextContent(type="text", text=f"Error: {str(e)}")]
+            content=[TextContent(type="text", text=f"Error: {str(e)}")],
+            isError=True
         )
 
 

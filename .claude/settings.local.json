@@ -7,7 +7,13 @@
       "Bash(rm:*)",
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python mcp_server.py)",
-      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"import mcp; print(mcp.__version__)\")"
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"import mcp; print(mcp.__version__)\")",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python test_functions.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python test_mcp_tools.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"import mcp.types; print(dir(mcp.types.CallToolResult))\")",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"from mcp.types import CallToolResult; print(CallToolResult.model_fields)\")",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python test_jsonrpc.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/pip list)"
     ],
     "deny": []
   }
