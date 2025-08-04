@@ -8,5 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY mcp_server.py .
+COPY manifest.json .
+COPY package.json .
 
 CMD ["python", "mcp_server.py"]

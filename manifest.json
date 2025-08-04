@@ -1,0 +1,28 @@
+{
+  "name": "clintrials-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for accessing and analyzing clinical trials data from ClinicalTrials.gov",
+  "main": "mcp_server.py",
+  "type": "module",
+  "bin": {
+    "clintrials-mcp": "./bin/clintrials-mcp"
+  },
+  "scripts": {
+    "start": "python mcp_server.py",
+    "test": "python test_server.py"
+  },
+  "keywords": [
+    "mcp",
+    "clinical-trials", 
+    "medical-research"
+  ],
+  "author": "Clinical Trials MCP Team",
+  "license": "MIT",
+  "mcp": {
+    "server": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "env": {}
+    }
+  }
+}

@@ -4,7 +4,8 @@
       "WebFetch(domain:clinicaltrials.gov)",
       "Bash(mkdir:*)",
       "Bash(zip:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }
