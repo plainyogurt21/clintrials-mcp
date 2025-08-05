@@ -17,7 +17,9 @@
       "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"\nimport asyncio\nfrom mcp_server import handle_call_tool\n\nasync def test():\n    # Test error case\n    try:\n        result = await handle_call_tool(''nonexistent_tool'', {})\n        print(f''Error result type: {type(result)}'')\n        print(f''Error result isError: {result.isError}'')\n        print(f''Error result content: {result.content[0].text}'')\n    except Exception as e:\n        print(f''Exception: {e}'')\n\nasyncio.run(test())\n\")",
       "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"import mcp; print(mcp.__version__)\")",
       "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python -c \"from mcp.types import CallToolResult; print(CallToolResult.model_fields)\")",
-      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python debug_callresult.py)"
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python debug_callresult.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python test_server_debug.py)",
+      "Bash(/Users/adusubramanian/clintrials-mcp/.venv/bin/python test_stdio_server.py)"
     ],
     "deny": []
   }

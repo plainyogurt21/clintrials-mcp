@@ -335,7 +335,7 @@ async def handle_list_tools() -> List[Tool]:
 
 
 @server.call_tool()
-async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> CallToolResult:
+async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> Union[CallToolResult, Dict[str, Any]]:
     """Handle tool calls"""
     
     try:
@@ -423,16 +423,18 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> CallToolResu
         else:
             raise ValueError(f"Unknown tool: {name}")
         
-        return CallToolResult(
-            content=[TextContent(type="text", text=json.dumps(result, indent=2))],
-            isError=False
-        )
+        # Return plain dictionary - let MCP framework handle conversion
+        return {
+            "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
+            "isError": False
+        }
         
     except Exception as e:
-        return CallToolResult(
-            content=[TextContent(type="text", text=f"Error: {str(e)}")],
-            isError=True
-        )
+        # Return plain dictionary for error - let MCP framework handle conversion
+        return {
+            "content": [{"type": "text", "text": f"Error: {str(e)}"}],
+            "isError": True
+        }
 
 
 async def main():
