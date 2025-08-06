@@ -51,7 +51,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "clintrials-mcp=mcp_server:main",
+            "clintrials-mcp=mcp_server:cli_main",
         ],
     },
     scripts=[
