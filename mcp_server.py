@@ -186,7 +186,18 @@ def search_trials_by_condition(
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Search clinical trials by medical condition(s)"""
+    """
+    Search clinical trials by medical condition(s).
+
+    This tool allows you to search for clinical trials based on a list of medical conditions.
+    
+    Input:
+      - `conditions`: A list of strings, where each string is a medical condition to search for. 
+                      The search will find trials related to any of the specified conditions.
+                      Example: `['cancer', 'diabetes']`
+      - `max_studies`: The maximum number of studies to return. Defaults to 50.
+      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+    """
     try:
         result = api_client.search_studies(
             conditions=conditions,
@@ -204,7 +215,18 @@ def search_trials_by_intervention(
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Search clinical trials by intervention/treatment"""
+    """
+    Search clinical trials by intervention/treatment.
+
+    This tool allows you to search for clinical trials based on a list of interventions or treatments.
+
+    Input:
+      - `interventions`: A list of strings, where each string is an intervention or treatment to search for.
+                         The search will find trials related to any of the specified interventions.
+                         Example: `['aspirin', 'chemotherapy']`
+      - `max_studies`: The maximum number of studies to return. Defaults to 50.
+      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+    """
     try:
         result = api_client.search_studies(
             interventions=interventions,
@@ -222,7 +244,18 @@ def search_trials_by_sponsor(
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Search clinical trials by sponsor/organization"""
+    """
+    Search clinical trials by sponsor/organization.
+
+    This tool allows you to search for clinical trials based on a list of sponsor organizations.
+
+    Input:
+      - `sponsors`: A list of strings, where each string is a sponsor organization to search for.
+                    The search will find trials sponsored by any of the specified organizations.
+                    Example: `['National Cancer Institute', 'Pfizer']`
+      - `max_studies`: The maximum number of studies to return. Defaults to 50.
+      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+    """
     try:
         result = api_client.search_studies(
             sponsors=sponsors,
@@ -239,7 +272,16 @@ def search_trials_by_nct_ids(
     nct_ids: Annotated[List[str], Field(description="NCT IDs to retrieve")],
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Retrieve specific clinical trials by NCT ID(s)"""
+    """
+    Retrieve specific clinical trials by NCT ID(s).
+
+    This tool allows you to retrieve the details of specific clinical trials by providing their NCT IDs.
+
+    Input:
+      - `nct_ids`: A list of strings, where each string is an NCT ID to retrieve.
+                   Example: `['NCT04280705', 'NCT04280718']`
+      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+    """
     try:
         result = api_client.search_studies(
             nct_ids=nct_ids,
@@ -260,7 +302,20 @@ def search_trials_combined(
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Search clinical trials using multiple criteria"""
+    """
+    Search clinical trials using multiple criteria.
+
+    This tool allows you to perform a combined search using multiple criteria such as conditions, interventions, sponsors, and general terms.
+
+    Input:
+      - `conditions`: A list of medical conditions to search for.
+      - `interventions`: A list of interventions or treatments to search for.
+      - `sponsors`: A list of sponsor organizations to search for.
+      - `terms`: A list of general search terms.
+      - `nct_ids`: A list of specific NCT IDs to include in the search.
+      - `max_studies`: The maximum number of studies to return. Defaults to 50.
+      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+    """
     try:
         result = api_client.search_studies(
             conditions=conditions,
@@ -281,7 +336,16 @@ def get_trial_details(
     nct_id: Annotated[str, Field(description="NCT ID of the trial to retrieve")],
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
-    """Get comprehensive details for a single clinical trial"""
+    """
+    Get comprehensive details for a single clinical trial.
+
+    This tool retrieves detailed information for a single clinical trial given its NCT ID.
+
+    Input:
+      - `nct_id`: The NCT ID of the trial to retrieve.
+                  Example: `'NCT04280705'`
+      - `fields`: A list of specific fields to return. If not provided, all available fields will be returned.
+    """
     try:
         result = api_client.get_study_by_id(
             nct_id=nct_id,
@@ -299,7 +363,18 @@ def analyze_trial_phases(
     sponsors: Annotated[Optional[List[str]], Field(description="Sponsors to analyze")] = None,
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to analyze")] = 1000
 ) -> Dict[str, Any]:
-    """Analyze the distribution of trial phases for given search criteria"""
+    """
+    Analyze the distribution of trial phases for given search criteria.
+
+    This tool analyzes the distribution of clinical trial phases (e.g., Phase 1, Phase 2, Phase 3) 
+    for a given set of search criteria.
+
+    Input:
+      - `conditions`: A list of medical conditions to filter the analysis.
+      - `interventions`: A list of interventions to filter the analysis.
+      - `sponsors`: A list of sponsors to filter the analysis.
+      - `max_studies`: The maximum number of studies to include in the analysis. Defaults to 1000.
+    """
     try:
         # Get studies with phase information
         search_result = api_client.search_studies(
@@ -340,7 +415,16 @@ def get_field_statistics(
     field_names: Annotated[Optional[List[str]], Field(description="Field names to get statistics for")] = None,
     field_types: Annotated[Optional[List[str]], Field(description="Field types to filter by (ENUM, STRING, DATE, INTEGER, NUMBER, BOOLEAN)")] = None
 ) -> Dict[str, Any]:
-    """Get statistical information about field values"""
+    """
+    Get statistical information about field values.
+
+    This tool retrieves statistical information about the values of specified fields in the ClinicalTrials.gov database.
+
+    Input:
+      - `field_names`: A list of field names to get statistics for.
+      - `field_types`: A list of field types to filter by.
+                       Example: `['ENUM', 'STRING']`
+    """
     try:
         result = api_client.get_field_statistics(
             field_names=field_names,
@@ -355,7 +439,17 @@ def get_field_statistics(
 def get_available_fields(
     category: Annotated[Optional[str], Field(description="Optional: specific category to return (identification, status, conditions, design, interventions, arms, outcomes, eligibility, locations, sponsors, descriptions, contacts, results)")] = None
 ) -> Dict[str, Any]:
-    """Get organized list of available fields for customizing search results"""
+    """
+    Get organized list of available fields for customizing search results.
+
+    This tool provides a list of available fields that can be used to customize the results of other search tools.
+    The fields are organized into categories.
+
+    Input:
+      - `category`: An optional string to specify a category of fields to return.
+                    If not provided, all categories and default fields will be returned.
+                    Example: `'conditions'`
+    """
     try:
         if category and category in AVAILABLE_FIELD_CATEGORIES:
             result = {
@@ -382,7 +476,19 @@ def search_trials_nct_ids_only(
     terms: Annotated[Optional[List[str]], Field(description="General search terms")] = None,
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return (optimized for discovery)")] = 100
 ) -> Dict[str, Any]:
-    """Lightweight search returning only NCT IDs and minimal metadata for discovery"""
+    """
+    Lightweight search returning only NCT IDs and minimal metadata for discovery.
+
+    This tool performs a lightweight search that returns only the NCT IDs and minimal metadata 
+    for the purpose of discovering relevant trials.
+
+    Input:
+      - `conditions`: A list of medical conditions to search for.
+      - `interventions`: A list of interventions or treatments to search for.
+      - `sponsors`: A list of sponsor organizations to search for.
+      - `terms`: A list of general search terms.
+      - `max_studies`: The maximum number of studies to return. Defaults to 100.
+    """
     try:
         result = api_client.search_studies(
             conditions=conditions,
@@ -404,7 +510,8 @@ def cli_main():
     try:
         mcp.run()
     except KeyboardInterrupt:
-        print("\nShutting down Clinical Trials MCP Server...")
+        print("
+Shutting down Clinical Trials MCP Server...")
         sys.exit(0)
     except Exception as e:
         print(f"Error starting server: {e}", file=sys.stderr)
