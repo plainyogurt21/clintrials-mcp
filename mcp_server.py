@@ -7,14 +7,16 @@ Allows LLMs to search, retrieve, and analyze clinical trial information.
 """
 
 import json
-import sys
+import os
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import requests
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
+import uvicorn
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import Field
+from starlette.middleware.cors import CORSMiddleware
 from typing_extensions import Annotated
 
 # Default fields to reduce context size while maintaining key information
@@ -180,7 +182,7 @@ mcp = FastMCP("clinical-trials-server")
 api_client = ClinicalTrialsAPI()
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_by_condition(
     conditions: Annotated[List[str], Field(description="Medical conditions to search for")],
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
@@ -209,7 +211,7 @@ def search_trials_by_condition(
         raise ToolError(f"Error searching trials by condition: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_by_intervention(
     interventions: Annotated[List[str], Field(description="Interventions/treatments to search for")],
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
@@ -238,7 +240,7 @@ def search_trials_by_intervention(
         raise ToolError(f"Error searching trials by intervention: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_by_sponsor(
     sponsors: Annotated[List[str], Field(description="Sponsor organizations to search for")],
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
@@ -267,7 +269,7 @@ def search_trials_by_sponsor(
         raise ToolError(f"Error searching trials by sponsor: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_by_nct_ids(
     nct_ids: Annotated[List[str], Field(description="NCT IDs to retrieve")],
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
@@ -292,7 +294,7 @@ def search_trials_by_nct_ids(
         raise ToolError(f"Error retrieving trials by NCT IDs: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_combined(
     conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to search for")] = None,
     interventions: Annotated[Optional[List[str]], Field(description="Interventions/treatments to search for")] = None,
@@ -331,7 +333,7 @@ def search_trials_combined(
         raise ToolError(f"Error in combined trial search: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def get_trial_details(
     nct_id: Annotated[str, Field(description="NCT ID of the trial to retrieve")],
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
@@ -356,7 +358,7 @@ def get_trial_details(
         raise ToolError(f"Error retrieving trial details for {nct_id}: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def analyze_trial_phases(
     conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to analyze")] = None,
     interventions: Annotated[Optional[List[str]], Field(description="Interventions to analyze")] = None,
@@ -410,7 +412,7 @@ def analyze_trial_phases(
         raise ToolError(f"Error analyzing trial phases: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def get_field_statistics(
     field_names: Annotated[Optional[List[str]], Field(description="Field names to get statistics for")] = None,
     field_types: Annotated[Optional[List[str]], Field(description="Field types to filter by (ENUM, STRING, DATE, INTEGER, NUMBER, BOOLEAN)")] = None
@@ -435,7 +437,7 @@ def get_field_statistics(
         raise ToolError(f"Error retrieving field statistics: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def get_available_fields(
     category: Annotated[Optional[str], Field(description="Optional: specific category to return (identification, status, conditions, design, interventions, arms, outcomes, eligibility, locations, sponsors, descriptions, contacts, results)")] = None
 ) -> Dict[str, Any]:
@@ -468,7 +470,7 @@ def get_available_fields(
         raise ToolError(f"Error retrieving available fields: {str(e)}")
 
 
-@mcp.tool
+@mcp.tool()
 def search_trials_nct_ids_only(
     conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to search for")] = None,
     interventions: Annotated[Optional[List[str]], Field(description="Interventions/treatments to search for")] = None,
@@ -503,21 +505,34 @@ def search_trials_nct_ids_only(
         raise ToolError(f"Error in lightweight NCT ID search: {str(e)}")
 
 
-def cli_main():
-    """CLI entry point for the server"""
-    import asyncio
-    import traceback
-    try:
+def main():
+    """Entry point supporting both HTTP and STDIO transports."""
+    transport_mode = os.getenv("TRANSPORT", "stdio")
+
+    if transport_mode == "http":
+        print("Clinical Trials MCP Server starting in HTTP mode...")
+        app = mcp.streamable_http_app()
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["mcp-session-id", "mcp-protocol-version"],
+            max_age=86400,
+        )
+
+        port = int(os.environ.get("PORT", 8081))
+        print(f"Listening on port {port}")
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+    else:
+        print("Clinical Trials MCP Server starting in stdio mode...")
         mcp.run()
-    except KeyboardInterrupt:
-        print("
-Shutting down Clinical Trials MCP Server...")
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error starting server: {e}", file=sys.stderr)
-        print(f"Full traceback: {traceback.format_exc()}", file=sys.stderr)
-        sys.exit(1)
+
+
+def cli_main():
+    main()
 
 
 if __name__ == "__main__":
-    cli_main()
+    main()

@@ -1,9 +1,7 @@
 startCommand:
-  type: stdio
+  type: container
+  path: .
   configSchema:
     type: object
     description: No configuration required for Clinical Trials MCP Server
-  commandFunction: |-
-    (config) => ({ command: 'python', args: ['mcp_server.py'] })
   exampleConfig: {}
-  
