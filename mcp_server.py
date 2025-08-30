@@ -7,6 +7,7 @@ Allows LLMs to search, retrieve, and analyze clinical trial information.
 """
 
 import json
+import os
 import sys
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
@@ -16,6 +17,9 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from pydantic import Field
 from typing_extensions import Annotated
+import uvicorn
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 # Default fields to reduce context size while maintaining key information
 DEFAULT_STUDY_FIELDS = [
@@ -503,21 +507,40 @@ def search_trials_nct_ids_only(
         raise ToolError(f"Error in lightweight NCT ID search: {str(e)}")
 
 
-def cli_main():
-    """CLI entry point for the server"""
-    import asyncio
-    import traceback
+def main():
+    """Start server in HTTP mode with CORS (Smithery-compatible)."""
+    print("Clinical Trials MCP Server starting in HTTP mode...")
+
+    # Create HTTP app from FastMCP (streaming supported by FastMCP >=2.3)
+    app = mcp.http_app()
+
+    # Enable permissive CORS for browser-based clients and Smithery
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["mcp-session-id", "mcp-protocol-version"],
+        max_age=86400,
+    )
+
+    # Simple health endpoint for local testing
+    async def health(_request):
+        return JSONResponse({"status": "ok"})
+
     try:
-        mcp.run()
-    except KeyboardInterrupt:
-        print("
-Shutting down Clinical Trials MCP Server...")
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error starting server: {e}", file=sys.stderr)
-        print(f"Full traceback: {traceback.format_exc()}", file=sys.stderr)
-        sys.exit(1)
+        app.add_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
+    except Exception:
+        # Some Starlette app versions may only support add_api_route
+        app.add_api_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
+
+    # Respect Smithery PORT env var (defaults to 8081)
+    port = int(os.environ.get("PORT", 8081))
+    print(f"Listening on port {port}")
+
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
 
 
 if __name__ == "__main__":
-    cli_main()
+    main()

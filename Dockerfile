@@ -11,4 +11,10 @@ COPY mcp_server.py .
 COPY manifest.json .
 COPY package.json .
 
+# Default to HTTP transport inside container
+ENV TRANSPORT=http
+
+# Expose Smithery default port
+EXPOSE 8081
+
 CMD ["python", "mcp_server.py"]

@@ -286,3 +286,31 @@ The server includes comprehensive error handling:
 ## License
 
 This project is open source and available under the MIT License.
+
+## HTTP Server Usage (Local)
+
+The server runs in HTTP mode by default and is compatible with Claude Code, Smithery, and other MCP desktop servers that support Streamable HTTP.
+
+- Install: `pip install -r requirements.txt`
+- Run: `PORT=8081 python mcp_server.py`
+- Health check: `curl -s http://localhost:8081/healthz` → `{ "status": "ok" }`
+
+### Docker
+
+- Build: `docker build -t clinical-trials-mcp .`
+- Run: `docker run -p 8081:8081 -e PORT=8081 clinical-trials-mcp`
+
+### CORS Preflight Test
+
+```
+curl -i -X OPTIONS \
+  -H 'Origin: http://localhost:3000' \
+  -H 'Access-Control-Request-Method: POST' \
+  http://localhost:8081/
+```
+
+You should see `HTTP/1.1 200 OK` and permissive `access-control-allow-*` headers.
+
+### Smithery
+
+This repo includes a `Dockerfile` and `smithery.yaml` configured for container runtime with HTTP transport. Deploy via https://smithery.ai/new and ensure the app listens on the `PORT` environment variable (Smithery sets it to 8081).
