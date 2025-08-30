@@ -272,6 +272,72 @@ def search_trials_by_sponsor(
 
 
 @mcp.tool
+def search_trials_by_acronym(
+    acronyms: Annotated[List[str], Field(description="Trial acronyms to search for, e.g., ['TETON']")],
+    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
+    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None,
+    exact_match: Annotated[bool, Field(description="If true, match acronym exactly; if false, allow partial matches")]=True,
+) -> Dict[str, Any]:
+    """
+    Search clinical trials by study acronym.
+
+    Uses the Acronym field (protocolSection.identificationModule.acronym) to find
+    trials by their public short name. Example: 'TETON'. The API search is seeded
+    with the provided acronyms to narrow results, then results are filtered locally
+    to ensure the acronym field matches the requested value(s).
+
+    Input:
+      - `acronyms`: One or more acronyms to search for (e.g., ['TETON']).
+      - `max_studies`: Maximum number of studies to request from the API.
+      - `fields`: Optional list of fields to return. The Acronym field will be
+                  included automatically to enable filtering.
+      - `exact_match`: When true (default), matches acronyms exactly (case-insensitive).
+                       When false, matches if any provided acronym is contained within
+                       the study acronym (case-insensitive partial match).
+    """
+    try:
+        # Ensure Acronym is requested so we can filter reliably
+        requested_fields = set(fields or DEFAULT_STUDY_FIELDS)
+        requested_fields.add("Acronym")
+
+        seed_result = api_client.search_studies(
+            terms=acronyms,  # seed the server-side search
+            max_studies=max_studies,
+            fields=sorted(requested_fields),
+        )
+
+        # Build case-insensitive acronym set for exact matching
+        targets = {a.lower() for a in acronyms}
+        filtered: List[Dict[str, Any]] = []
+
+        for study in seed_result.get("studies", []):
+            protocol = study.get("protocolSection", {}) or {}
+            ident = protocol.get("identificationModule", {}) or {}
+            acr = ident.get("acronym")
+
+            if not isinstance(acr, str):
+                continue
+
+            acr_l = acr.lower()
+            if exact_match:
+                if acr_l in targets:
+                    filtered.append(study)
+            else:
+                if any(t in acr_l for t in targets):
+                    filtered.append(study)
+
+        # Return the same shape as the API, but with filtered studies
+        result = dict(seed_result)
+        if "studies" in result:
+            result["studies"] = filtered
+        else:
+            result = {"studies": filtered}
+        return result
+    except Exception as e:
+        raise ToolError(f"Error searching trials by acronym: {str(e)}")
+
+
+@mcp.tool
 def search_trials_by_nct_ids(
     nct_ids: Annotated[List[str], Field(description="NCT IDs to retrieve")],
     fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None

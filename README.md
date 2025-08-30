@@ -26,6 +26,24 @@ python mcp_server.py
 
 ### Search Tools
 
+#### `search_trials_by_acronym`
+Search clinical trials by study acronym (protocolSection.identificationModule.acronym).
+
+**Parameters:**
+- `acronyms` (required): Array of acronyms to search for (e.g., ["TETON"]).
+- `max_studies` (optional): Maximum number of studies to return (default: 50)
+- `fields` (optional): Specific fields to return (Acronym is always included for filtering)
+- `exact_match` (optional): Exact match when true; partial contains match when false (default: true)
+
+**Example:**
+```json
+{
+  "acronyms": ["TETON"],
+  "max_studies": 100,
+  "exact_match": true
+}
+```
+
 #### `search_trials_by_condition`
 Search clinical trials by medical condition(s).
 
