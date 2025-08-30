@@ -7,12 +7,15 @@ Allows LLMs to search, retrieve, and analyze clinical trial information.
 """
 
 import json
+import os
 import sys
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import requests
 from fastmcp import FastMCP
+from starlette.middleware.cors import CORSMiddleware
+import uvicorn
 from fastmcp.exceptions import ToolError
 from pydantic import Field
 from typing_extensions import Annotated
@@ -510,8 +513,7 @@ def cli_main():
     try:
         mcp.run()
     except KeyboardInterrupt:
-        print("
-Shutting down Clinical Trials MCP Server...")
+        print("\nShutting down Clinical Trials MCP Server...")
         sys.exit(0)
     except Exception as e:
         print(f"Error starting server: {e}", file=sys.stderr)
@@ -520,4 +522,36 @@ Shutting down Clinical Trials MCP Server...")
 
 
 if __name__ == "__main__":
-    cli_main()
+    # Support both HTTP (for Smithery) and STDIO (local/backwards-compat)
+    transport_mode = os.getenv("TRANSPORT", "stdio").lower()
+
+    if transport_mode == "http":
+        print("Clinical Trials MCP Server starting in HTTP mode...")
+        # Build streamable HTTP app
+        app = mcp.streamable_http_app()
+
+        # Add permissive CORS for browser-based clients
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["mcp-session-id", "mcp-protocol-version"],
+            max_age=86400,
+        )
+
+        # Optional: Smithery config extraction middleware (safe if present)
+        try:
+            from middleware import SmitheryConfigMiddleware  # type: ignore
+            app = SmitheryConfigMiddleware(app)
+        except Exception:
+            pass
+
+        # Use Smithery-provided PORT env var (defaults to 8081)
+        port = int(os.environ.get("PORT", 8081))
+        print(f"Listening on port {port}")
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+    else:
+        print("Clinical Trials MCP Server starting in STDIO mode...")
+        cli_main()

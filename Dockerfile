@@ -11,4 +11,7 @@ COPY mcp_server.py .
 COPY manifest.json .
 COPY package.json .
 
+# Set transport mode to HTTP for container runtime
+ENV TRANSPORT=http
+
 CMD ["python", "mcp_server.py"]
