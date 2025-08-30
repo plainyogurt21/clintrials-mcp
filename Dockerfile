@@ -11,4 +11,7 @@ COPY mcp_server.py .
 COPY manifest.json .
 COPY package.json .
 
+EXPOSE 8081
+ENV TRANSPORT=http
+
 CMD ["python", "mcp_server.py"]
