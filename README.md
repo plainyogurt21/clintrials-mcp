@@ -181,6 +181,21 @@ Get statistical information about field values.
 }
 ```
 
+## Search Result Fields
+
+All search tools return a standardized, minimal set of fields to keep payloads small:
+
+- `NCTId`: Trial identifier
+- `BriefTitle`: Title
+- `Acronym`: Study acronym
+- `InterventionName`: Intervention names
+- `Condition`: Medical conditions
+- `Phase`: Trial phase(s)
+- `LeadSponsorName` and `CollaboratorName`: Sponsors
+- `HasResults`: Whether results are posted
+
+Use `get_trial_details_batched` to fetch full details once you’ve identified relevant trials.
+
 ## Common Field Names
 
 Here are some commonly used field names you can specify in the `fields` parameter:
@@ -229,14 +244,25 @@ Here are some commonly used field names you can specify in the `fields` paramete
 
 ## Usage Examples
 
-### Search for COVID-19 vaccine trials:
+### Search for COVID-19 vaccine trials, then fetch details in batches:
 ```json
 {
   "tool": "search_trials_by_condition",
   "arguments": {
     "conditions": ["COVID-19"],
-    "interventions": ["vaccine"],
     "max_studies": 50
+  }
+}
+```
+
+Then, request detailed records in batches of 10:
+
+```json
+{
+  "tool": "get_trial_details_batched",
+  "arguments": {
+    "nct_ids": ["NCT01234567", "NCT07654321"],
+    "batch_size": 10
   }
 }
 ```
