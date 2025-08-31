@@ -573,7 +573,32 @@ def search_trials_nct_ids_only(
         raise ToolError(f"Error in lightweight NCT ID search: {str(e)}")
 
 
-def main():
+def _detect_transport() -> str:
+    """Detect transport automatically, with env override.
+
+    Priority:
+    1) MCP_TRANSPORT env var if set to 'stdio' or 'http'
+    2) If stdin is not a TTY (likely launched by an MCP host), use 'stdio'
+    3) If PORT env var is set, prefer 'http'
+    4) Default to 'http'
+    """
+    forced = os.environ.get("MCP_TRANSPORT", "").strip().lower()
+    if forced in {"stdio", "http"}:
+        return forced
+
+    # If we're launched under a host that pipes stdio, stdin won't be a TTY
+    try:
+        if hasattr(sys.stdin, "isatty") and not sys.stdin.isatty():
+            return "stdio"
+    except Exception:
+        pass
+
+    if os.environ.get("PORT"):
+        return "http"
+    return "http"
+
+
+def _run_http():
     """Start server in HTTP mode with CORS (Smithery-compatible)."""
     print("Clinical Trials MCP Server starting in HTTP mode...")
 
@@ -606,6 +631,21 @@ def main():
     print(f"Listening on port {port}")
 
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+
+
+def _run_stdio():
+    """Start server in stdio mode for MCP hosts like Cline/Claude Code."""
+    print("Clinical Trials MCP Server starting in STDIO mode...")
+    # FastMCP's stdio runner
+    mcp.run()
+
+
+def main():
+    transport = _detect_transport()
+    if transport == "stdio":
+        _run_stdio()
+    else:
+        _run_http()
 
 
 if __name__ == "__main__":

@@ -313,6 +313,45 @@ The server runs in HTTP mode by default and is compatible with Claude Code, Smit
 - Run: `PORT=8081 python mcp_server.py`
 - Health check: `curl -s http://localhost:8081/healthz` → `{ "status": "ok" }`
 
+## Transport Modes (Auto)
+
+This server now auto-detects the transport to run:
+
+- Auto detection order:
+  1) `MCP_TRANSPORT=stdio|http` forces a mode
+  2) If stdin is not a TTY (launched by an MCP host), uses `stdio`
+  3) If `PORT` is set, uses `http`
+  4) Otherwise defaults to `http`
+
+### Force a mode
+
+- STDIO: `MCP_TRANSPORT=stdio python mcp_server.py`
+- HTTP: `MCP_TRANSPORT=http PORT=8081 python mcp_server.py`
+
+### Cline configuration examples
+
+- HTTP entry:
+```
+"clinical-trials-mcp": {
+  "disabled": false,
+  "timeout": 120,
+  "type": "http",
+  "url": "http://localhost:8081",
+  "autoApprove": []
+}
+```
+
+- STDIO entry:
+```
+"clinical-trials-mcp": {
+  "disabled": false,
+  "timeout": 120,
+  "type": "stdio",
+  "command": "/path/to/venv/bin/python",
+  "args": [ "/path/to/clintrials-mcp/mcp_server.py" ]
+}
+```
+
 ### Docker
 
 - Build: `docker build -t clinical-trials-mcp .`
