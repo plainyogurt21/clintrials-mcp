@@ -434,11 +434,15 @@ def _summarize_studies(studies: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         sponsors: List[str] = []
         lead = spons.get("leadSponsor") or {}
         if isinstance(lead, dict) and isinstance(lead.get("name"), str):
-            sponsors.append(lead.get("name"))
+            lead_name = lead.get("name")
+            if lead_name:
+                sponsors.append(lead_name)
         collabs = spons.get("collaborators") or []
         for c in collabs:
             if isinstance(c, dict) and isinstance(c.get("name"), str):
-                sponsors.append(c.get("name"))
+                collab_name = c.get("name")
+                if collab_name:
+                    sponsors.append(collab_name)
 
         summarized.append({
             "nctId": nct_id,
@@ -875,29 +879,13 @@ def search_trials_nct_ids_only(
         raise ToolError(f"Error in lightweight NCT ID search: {str(e)}")
 
 
-def _detect_transport() -> str:
-    """Detect transport automatically, with env override.
-
-    Priority:
-    1) MCP_TRANSPORT env var if set to 'stdio' or 'http'
-    2) If stdin is not a TTY (likely launched by an MCP host), use 'stdio'
-    3) If PORT env var is set, prefer 'http'
-    4) Default to 'http'
+def _get_transport_mode() -> str:
+    """Get transport mode from environment variable.
+    
+    Uses TRANSPORT env var, defaults to 'stdio' for local development.
+    Docker containers should set TRANSPORT=http for Smithery compatibility.
     """
-    forced = os.environ.get("MCP_TRANSPORT", "").strip().lower()
-    if forced in {"stdio", "http"}:
-        return forced
-
-    # If we're launched under a host that pipes stdio, stdin won't be a TTY
-    try:
-        if hasattr(sys.stdin, "isatty") and not sys.stdin.isatty():
-            return "stdio"
-    except Exception:
-        pass
-
-    if os.environ.get("PORT"):
-        return "http"
-    return "http"
+    return os.getenv("TRANSPORT", "stdio").lower()
 
 
 def _run_http():
@@ -919,7 +907,7 @@ def _run_http():
     )
 
     # Simple health endpoint for local testing
-    async def health(_request):
+    async def health(_):
         return JSONResponse({"status": "ok"})
 
     try:
@@ -948,7 +936,7 @@ def _run_stdio():
 
 
 def main():
-    transport = _detect_transport()
+    transport = _get_transport_mode()
     if transport == "stdio":
         _run_stdio()
     else:

@@ -14,6 +14,9 @@ COPY package.json .
 # Default to HTTP transport inside container
 ENV TRANSPORT=http
 
+# Smithery uses PORT; default 8081
+ENV PORT=8081
+
 # Expose Smithery default port
 EXPOSE 8081
 

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(source:*)",
       "Bash(python:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(TRANSPORT=http .venv/bin/python -c \"import os; print(''Transport mode:'', os.getenv(''TRANSPORT'', ''stdio''))\")",
+      "Bash(.venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []
