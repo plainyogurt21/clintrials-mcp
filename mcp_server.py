@@ -905,7 +905,7 @@ def _run_http():
     print("Clinical Trials MCP Server starting in HTTP mode...")
 
     # Create HTTP app from FastMCP (streaming supported by FastMCP >=2.3)
-    app = mcp.http_app()
+    app = mcp.streamable_http_app()
 
     # Enable permissive CORS for browser-based clients and Smithery
     app.add_middleware(
@@ -925,8 +925,13 @@ def _run_http():
     try:
         app.add_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
     except Exception:
-        # Some Starlette app versions may only support add_api_route
-        app.add_api_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
+        try:
+            # Some Starlette app versions may only support add_api_route
+            app.add_api_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
+        except Exception:
+            # Last resort - try mounting it directly on the router
+            from starlette.routing import Route
+            app.router.routes.append(Route("/healthz", health, methods=["GET"]))
 
     # Respect Smithery PORT env var (defaults to 8081)
     port = int(os.environ.get("PORT", 8081))
