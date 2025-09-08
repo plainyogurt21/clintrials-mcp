@@ -102,6 +102,194 @@ class ClinicalTrialsAPI:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': 'ClinicalTrials-MCP-Server/1.0'})
+    
+    def parse_specific_fields(self, studies: List[Dict[str, Any]], requested_fields: Optional[List[str]]) -> List[Dict[str, Any]]:
+        """Parse and filter study data based on requested fields.
+        
+        Always receives full study data from API, then filters based on requested_fields.
+        If requested_fields is None, returns all data as-is.
+        
+        Args:
+            studies: List of full study records from API
+            requested_fields: List of specific fields to extract, or None for all fields
+            
+        Returns:
+            List of filtered study records
+        """
+        if not requested_fields:
+            return studies
+            
+        # Normalize requested fields
+        normalized_fields = self._normalize_fields(requested_fields)
+        if not normalized_fields:
+            return studies
+            
+        filtered_studies = []
+        for study in studies:
+            filtered_study = self._extract_fields_from_study(study, normalized_fields)
+            filtered_studies.append(filtered_study)
+            
+        return filtered_studies
+    
+    def _extract_fields_from_study(self, study: Dict[str, Any], fields: List[str]) -> Dict[str, Any]:
+        """Extract specific fields from a full study record.
+        
+        Args:
+            study: Full study record from API
+            fields: List of normalized field names to extract
+            
+        Returns:
+            Filtered study record containing only requested fields
+        """
+        result = {}
+        
+        # Always preserve hasResults at top level if present
+        if "hasResults" in study:
+            result["hasResults"] = study["hasResults"]
+            
+        protocol_section = study.get("protocolSection", {})
+        if not protocol_section:
+            return result
+            
+        result["protocolSection"] = {}
+        
+        # Field mapping to protocol section modules
+        field_mappings = {
+            # Identification Module
+            "NCTId": ("identificationModule", "nctId"),
+            "BriefTitle": ("identificationModule", "briefTitle"),
+            "OfficialTitle": ("identificationModule", "officialTitle"),
+            "Acronym": ("identificationModule", "acronym"),
+            "SecondaryId": ("identificationModule", "secondaryIdInfos"),
+            
+            # Status Module  
+            "OverallStatus": ("statusModule", "overallStatus"),
+            "StatusVerifiedDate": ("statusModule", "statusVerifiedDate"),
+            "LastUpdatePostDate": ("statusModule", "lastUpdatePostDateStruct"),
+            "StartDate": ("statusModule", "startDateStruct"),
+            "PrimaryCompletionDate": ("statusModule", "primaryCompletionDateStruct"),
+            "CompletionDate": ("statusModule", "completionDateStruct"),
+            
+            # Conditions Module
+            "Condition": ("conditionsModule", "conditions"),
+            "Keyword": ("conditionsModule", "keywords"),
+            
+            # Design Module
+            "StudyType": ("designModule", "studyType"),
+            "Phase": ("designModule", "phases"),
+            "DesignAllocation": ("designModule", "designInfo.allocation"),
+            "DesignInterventionModel": ("designModule", "designInfo.interventionModel"),
+            "DesignPrimaryPurpose": ("designModule", "designInfo.primaryPurpose"),
+            "DesignMasking": ("designModule", "designInfo.maskingInfo.masking"),
+            
+            # Arms/Interventions Module
+            "InterventionType": ("armsInterventionsModule", "interventions"),
+            "InterventionName": ("armsInterventionsModule", "interventions"),
+            "InterventionDescription": ("armsInterventionsModule", "interventions"),
+            "InterventionOtherName": ("armsInterventionsModule", "interventions"),
+            "ArmGroupLabel": ("armsInterventionsModule", "armGroups"),
+            "ArmGroupType": ("armsInterventionsModule", "armGroups"),
+            "ArmGroupDescription": ("armsInterventionsModule", "armGroups"),
+            "ArmGroupInterventionName": ("armsInterventionsModule", "armGroups"),
+            
+            # Outcomes Module
+            "PrimaryOutcomeMeasure": ("outcomesModule", "primaryOutcomes"),
+            "PrimaryOutcomeDescription": ("outcomesModule", "primaryOutcomes"),
+            "SecondaryOutcomeMeasure": ("outcomesModule", "secondaryOutcomes"),
+            "SecondaryOutcomeDescription": ("outcomesModule", "secondaryOutcomes"),
+            
+            # Eligibility Module
+            "EligibilityCriteria": ("eligibilityModule", "eligibilityCriteria"),
+            "HealthyVolunteers": ("eligibilityModule", "healthyVolunteers"),
+            "Sex": ("eligibilityModule", "sex"),
+            "MinimumAge": ("eligibilityModule", "minimumAge"),
+            "MaximumAge": ("eligibilityModule", "maximumAge"),
+            "StdAge": ("eligibilityModule", "stdAges"),
+            
+            # Locations Module
+            "LocationFacility": ("contactsLocationsModule", "locations"),
+            "LocationCity": ("contactsLocationsModule", "locations"),
+            "LocationState": ("contactsLocationsModule", "locations"),
+            "LocationCountry": ("contactsLocationsModule", "locations"),
+            "LocationStatus": ("contactsLocationsModule", "locations"),
+            
+            # Sponsors Module
+            "LeadSponsorName": ("sponsorCollaboratorsModule", "leadSponsor"),
+            "LeadSponsorClass": ("sponsorCollaboratorsModule", "leadSponsor"),
+            "CollaboratorName": ("sponsorCollaboratorsModule", "collaborators"),
+            "ResponsiblePartyType": ("sponsorCollaboratorsModule", "responsibleParty"),
+            
+            # Description Module
+            "BriefSummary": ("descriptionModule", "briefSummary"),
+            "DetailedDescription": ("descriptionModule", "detailedDescription"),
+            
+            # Contacts Module
+            "CentralContactName": ("contactsLocationsModule", "centralContacts"),
+            "CentralContactPhone": ("contactsLocationsModule", "centralContacts"),
+            "CentralContactEMail": ("contactsLocationsModule", "centralContacts"),
+            "OverallOfficialName": ("contactsLocationsModule", "overallOfficials"),
+            
+            # Results info
+            "HasResults": ("hasResults", None),
+            "ResultsFirstSubmitDate": ("statusModule", "resultsFirstSubmitDate"),
+            "ResultsFirstPostDate": ("statusModule", "resultsFirstPostDateStruct"),
+        }
+        
+        for field in fields:
+            if field in field_mappings:
+                module_name, field_path = field_mappings[field]
+                
+                # Handle hasResults specially (it's at study level, not in protocolSection)
+                if field == "HasResults":
+                    if "hasResults" in study:
+                        result["hasResults"] = study["hasResults"]
+                    continue
+                    
+                # Get the module from protocolSection
+                module_data = protocol_section.get(module_name, {})
+                if not module_data:
+                    continue
+                    
+                # Ensure the module exists in result
+                if module_name not in result["protocolSection"]:
+                    result["protocolSection"][module_name] = {}
+                    
+                # Handle nested field paths (e.g., "designInfo.allocation")
+                if "." in field_path:
+                    self._extract_nested_field(module_data, field_path, result["protocolSection"][module_name])
+                else:
+                    # Direct field extraction
+                    if field_path in module_data:
+                        result["protocolSection"][module_name][field_path] = module_data[field_path]
+                        
+        return result
+    
+    def _extract_nested_field(self, source_data: Dict[str, Any], field_path: str, target_data: Dict[str, Any]) -> None:
+        """Extract a nested field from source to target data.
+        
+        Args:
+            source_data: Source module data
+            field_path: Dot-separated field path (e.g., "designInfo.allocation")
+            target_data: Target module data to populate
+        """
+        path_parts = field_path.split(".")
+        current_source = source_data
+        
+        # Navigate to the parent of the target field
+        for part in path_parts[:-1]:
+            if part in current_source and isinstance(current_source[part], dict):
+                current_source = current_source[part]
+                # Create nested structure in target
+                if part not in target_data:
+                    target_data[part] = {}
+                target_data = target_data[part]
+            else:
+                return  # Path doesn't exist
+        
+        # Extract the final field
+        final_field = path_parts[-1]
+        if final_field in current_source:
+            target_data[final_field] = current_source[final_field]
 
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         url = f"{self.BASE_URL}{endpoint}"
@@ -159,6 +347,7 @@ class ClinicalTrialsAPI:
                        max_studies: int = 50,
                        fields: Optional[List[str]] = None,
                        format_type: str = "json") -> Dict[str, Any]:
+        # Always request all fields from API (don't pass fields parameter to API)
         params: Dict[str, Any] = {"format": format_type, "pageSize": min(max_studies, 1000)}
         if conditions:
             params["query.cond"] = " OR ".join(conditions)
@@ -172,20 +361,32 @@ class ClinicalTrialsAPI:
             params["query.titles"] = " OR ".join(titles)
         if nct_ids:
             params["filter.ids"] = ",".join(nct_ids)
-        if fields:
-            norm = self._normalize_fields(fields)
-            if norm:
-                params["fields"] = ",".join(norm)
-        return self._make_request("/studies", params)
+        
+        # Get full data from API
+        response = self._make_request("/studies", params)
+        
+        # Filter based on requested fields
+        if "studies" in response and fields:
+            response["studies"] = self.parse_specific_fields(response["studies"], fields)
+            
+        return response
 
     def get_study_by_id(self, nct_id: str, fields: Optional[List[str]] = None,
                          format_type: str = "json") -> Dict[str, Any]:
+        # Always request all fields from API
         params: Dict[str, Any] = {"format": format_type}
+        
+        # Get full data from API
+        response = self._make_request(f"/studies/{nct_id}", params)
+        
+        # Filter based on requested fields
         if fields:
-            norm = self._normalize_fields(fields)
-            if norm:
-                params["fields"] = ",".join(norm)
-        return self._make_request(f"/studies/{nct_id}", params)
+            # For single study, wrap in list for filtering, then unwrap
+            filtered_studies = self.parse_specific_fields([response], fields)
+            if filtered_studies:
+                response = filtered_studies[0]
+                
+        return response
 
     def get_field_statistics(self, field_names: Optional[List[str]] = None,
                              field_types: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -195,321 +396,6 @@ class ClinicalTrialsAPI:
         if field_types:
             params["types"] = field_types
         return self._make_request("/stats/field/values", params)
-
-
-# Initialize FastMCP server and API client
-mcp = FastMCP("clinical-trials-server")
-api_client = ClinicalTrialsAPI()
-
-
-def _summarize_studies(studies: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    summarized: List[Dict[str, Any]] = []
-    for study in studies or []:
-        protocol = study.get("protocolSection", {}) or {}
-        ident = protocol.get("identificationModule", {}) or {}
-        arms = protocol.get("armsInterventionsModule", {}) or {}
-        conds = protocol.get("conditionsModule", {}) or {}
-        design = protocol.get("designModule", {}) or {}
-        spons = protocol.get("sponsorCollaboratorsModule", {}) or {}
-
-        nct_id = ident.get("nctId")
-        brief_title = ident.get("briefTitle")
-        acronym = ident.get("acronym")
-
-        interventions = []
-        for iv in (arms.get("interventions") or []):
-            name = iv.get("name")
-            if isinstance(name, str):
-                interventions.append(name)
-
-        conditions = [c for c in (conds.get("conditions") or []) if isinstance(c, str)]
-        phases = [p for p in (design.get("phases") or []) if isinstance(p, str)]
-
-        sponsors: List[str] = []
-        lead = spons.get("leadSponsor") or {}
-        if isinstance(lead, dict) and isinstance(lead.get("name"), str):
-            sponsors.append(lead.get("name"))
-        collabs = spons.get("collaborators") or []
-        for c in collabs:
-            if isinstance(c, dict) and isinstance(c.get("name"), str):
-                sponsors.append(c.get("name"))
-
-        summarized.append({
-            "nctId": nct_id,
-            "briefTitle": brief_title,
-            "acronym": acronym,
-            "interventions": interventions,
-            "conditions": conditions,
-            "phases": phases,
-            "sponsors": sponsors,
-            "hasResults": bool(study.get("hasResults"))
-        })
-    return summarized
-
-
-@mcp.tool
-def search_trials_by_condition(
-    conditions: Annotated[List[str], Field(description="Medical conditions to search for")],
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.search_studies(conditions=conditions, max_studies=max_studies, fields=fields)
-    except Exception as e:
-        raise ToolError(f"Error searching trials by condition: {str(e)}")
-
-
-@mcp.tool
-def search_trials_by_intervention(
-    interventions: Annotated[List[str], Field(description="Interventions/treatments to search for")],
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.search_studies(interventions=interventions, max_studies=max_studies, fields=fields)
-    except Exception as e:
-        raise ToolError(f"Error searching trials by intervention: {str(e)}")
-
-
-@mcp.tool
-def search_trials_by_sponsor(
-    sponsors: Annotated[List[str], Field(description="Sponsor organizations to search for")],
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.search_studies(sponsors=sponsors, max_studies=max_studies, fields=fields)
-    except Exception as e:
-        raise ToolError(f"Error searching trials by sponsor: {str(e)}")
-
-
-@mcp.tool
-def search_trials_by_acronym(
-    acronyms: Annotated[List[str], Field(description="Trial acronyms to search for, e.g., ['TETON']")],
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
-    exact_match: Annotated[bool, Field(description="If true, match acronym exactly; if false, allow partial matches")]=True,
-) -> Dict[str, Any]:
-    try:
-        seed = api_client.search_studies(titles=acronyms, max_studies=max_studies, fields=None)
-        targets = {a.lower() for a in acronyms}
-        filtered: List[Dict[str, Any]] = []
-        for study in seed.get("studies", []):
-            ident = (study.get("protocolSection") or {}).get("identificationModule", {}) or {}
-            acr = ident.get("acronym")
-            if isinstance(acr, str):
-                al = acr.lower()
-                if (al in targets) or (not exact_match and any(t in al for t in targets)):
-                    filtered.append(study)
-        return {"studies": filtered}
-    except Exception as e:
-        raise ToolError(f"Error searching trials by acronym: {str(e)}")
-
-
-@mcp.tool
-def search_trials_by_nct_ids(
-    nct_ids: Annotated[List[str], Field(description="NCT IDs to retrieve")],
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.search_studies(nct_ids=nct_ids, fields=fields)
-    except Exception as e:
-        raise ToolError(f"Error retrieving trials by NCT IDs: {str(e)}")
-
-
-@mcp.tool
-def search_trials_combined(
-    conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to search for")] = None,
-    interventions: Annotated[Optional[List[str]], Field(description="Interventions/treatments to search for")] = None,
-    sponsors: Annotated[Optional[List[str]], Field(description="Sponsor organizations to search for")] = None,
-    acronyms: Annotated[Optional[List[str]], Field(description="Study acronyms to search within titles/acronyms")] = None,
-    terms: Annotated[Optional[List[str]], Field(description="General search terms")] = None,
-    nct_ids: Annotated[Optional[List[str]], Field(description="Specific NCT IDs to include")] = None,
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.search_studies(
-            conditions=conditions,
-            interventions=interventions,
-            sponsors=sponsors,
-            terms=terms,
-            titles=acronyms,
-            nct_ids=nct_ids,
-            max_studies=max_studies,
-            fields=fields,
-        )
-    except Exception as e:
-        raise ToolError(f"Error in combined trial search: {str(e)}")
-
-
-@mcp.tool
-def get_trial_details(
-    nct_id: Annotated[str, Field(description="NCT ID of the trial to retrieve")],
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.get_study_by_id(nct_id=nct_id, fields=fields)
-    except Exception as e:
-        raise ToolError(f"Error retrieving trial details for {nct_id}: {str(e)}")
-
-
-@mcp.tool
-def get_trial_details_batched(
-    nct_ids: Annotated[List[str], Field(description="NCT IDs to retrieve in batches of 10")],
-    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return for detailed view")] = None,
-    batch_size: Annotated[int, Field(ge=1, le=1000, description="Batch size for each API call")] = 10,
-) -> Dict[str, Any]:
-    try:
-        def chunk(seq: List[str], n: int):
-            for i in range(0, len(seq), n):
-                yield seq[i:i+n]
-
-        requested_fields = fields  # None => all fields
-        all_by_id: Dict[str, Any] = {}
-        for part in chunk(nct_ids, batch_size):
-            page = api_client.search_studies(nct_ids=part, fields=requested_fields, max_studies=len(part))
-            for study in page.get("studies", []):
-                ident = (study.get("protocolSection") or {}).get("identificationModule", {}) or {}
-                nid = ident.get("nctId")
-                if isinstance(nid, str):
-                    all_by_id[nid] = study
-        ordered = [all_by_id[nid] for nid in nct_ids if nid in all_by_id]
-        return {"studies": ordered}
-    except Exception as e:
-        raise ToolError(f"Error retrieving batched trial details: {str(e)}")
-
-
-@mcp.tool
-def analyze_trial_phases(
-    conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to analyze")] = None,
-    interventions: Annotated[Optional[List[str]], Field(description="Interventions to analyze")] = None,
-    sponsors: Annotated[Optional[List[str]], Field(description="Sponsors to analyze")] = None,
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to analyze")] = 1000
-) -> Dict[str, Any]:
-    try:
-        search_result = api_client.search_studies(
-            conditions=conditions,
-            interventions=interventions,
-            sponsors=sponsors,
-            max_studies=max_studies,
-            fields=["NCTId", "Phase", "BriefTitle", "OverallStatus"],
-        )
-        phase_counts: Dict[str, int] = {}
-        total = len(search_result.get("studies", []))
-        for study in search_result.get("studies", []):
-            phases = ((study.get("protocolSection") or {}).get("designModule", {}) or {}).get("phases", ["Unknown"]) or ["Unknown"]
-            for p in phases:
-                phase_counts[p] = phase_counts.get(p, 0) + 1
-        return {
-            "total_studies": total,
-            "phase_distribution": phase_counts,
-            "phase_percentages": {k: (round((v/total)*100, 2) if total else 0) for k, v in phase_counts.items()},
-        }
-    except Exception as e:
-        raise ToolError(f"Error analyzing trial phases: {str(e)}")
-
-
-@mcp.tool
-def get_field_statistics(
-    field_names: Annotated[Optional[List[str]], Field(description="Field names to get statistics for")] = None,
-    field_types: Annotated[Optional[List[str]], Field(description="Field types to filter by (ENUM, STRING, DATE, INTEGER, NUMBER, BOOLEAN)")] = None
-) -> Dict[str, Any]:
-    try:
-        return api_client.get_field_statistics(field_names=field_names, field_types=field_types)
-    except Exception as e:
-        raise ToolError(f"Error retrieving field statistics: {str(e)}")
-
-
-@mcp.tool
-def get_available_fields(
-    category: Annotated[Optional[str], Field(description="Optional: specific category to return (identification, status, conditions, design, interventions, arms, outcomes, eligibility, locations, sponsors, descriptions, contacts, results)")] = None
-) -> Dict[str, Any]:
-    try:
-        if category and category in AVAILABLE_FIELD_CATEGORIES:
-            return {
-                "category": category,
-                "description": AVAILABLE_FIELD_CATEGORIES[category]["description"],
-                "fields": AVAILABLE_FIELD_CATEGORIES[category]["fields"],
-            }
-        return {"default_fields": DEFAULT_STUDY_FIELDS, "minimal_fields": SEARCH_RESULT_FIELDS, "categories": AVAILABLE_FIELD_CATEGORIES}
-    except Exception as e:
-        raise ToolError(f"Error retrieving available fields: {str(e)}")
-
-
-@mcp.tool
-def search_trials_nct_ids_only(
-    conditions: Annotated[Optional[List[str]], Field(description="Medical conditions to search for")] = None,
-    interventions: Annotated[Optional[List[str]], Field(description="Interventions/treatments to search for")] = None,
-    sponsors: Annotated[Optional[List[str]], Field(description="Sponsor organizations to search for")] = None,
-    terms: Annotated[Optional[List[str]], Field(description="General search terms")] = None,
-    max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return (optimized for discovery)")] = 100
-) -> Dict[str, Any]:
-    try:
-        # Despite the name, return full fields to support richer discovery as requested
-        return api_client.search_studies(
-            conditions=conditions,
-            interventions=interventions,
-            sponsors=sponsors,
-            terms=terms,
-            max_studies=max_studies,
-            fields=None,
-        )
-    except Exception as e:
-        raise ToolError(f"Error in lightweight NCT ID search: {str(e)}")
-
-
-def _detect_transport() -> str:
-    forced = os.environ.get("MCP_TRANSPORT", "").strip().lower()
-    if forced in {"stdio", "http"}:
-        return forced
-    try:
-        if hasattr(sys.stdin, "isatty") and not sys.stdin.isatty():
-            return "stdio"
-    except Exception:
-        pass
-    if os.environ.get("PORT"):
-        return "http"
-    return "http"
-
-
-def _run_http():
-    print("Clinical Trials MCP Server starting in HTTP mode...")
-    app = mcp.http_app()
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["*"],
-        expose_headers=["mcp-session-id", "mcp-protocol-version"],
-        max_age=86400,
-    )
-    async def health(_request):
-        return JSONResponse({"status": "ok"})
-    try:
-        app.add_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
-    except Exception:
-        app.add_api_route("/healthz", health, methods=["GET"])  # type: ignore[attr-defined]
-    port = int(os.environ.get("PORT", 8081))
-    print(f"Listening on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
-
-
-def _run_stdio():
-    print("Clinical Trials MCP Server starting in STDIO mode...")
-    mcp.run()
-
-
-def main():
-    transport = _detect_transport()
-    if transport == "stdio":
-        _run_stdio()
-    else:
-        _run_http()
-
-
-if __name__ == "__main__":
-    main()
 
 
 # Initialize FastMCP server and API client
@@ -583,14 +469,14 @@ def search_trials_by_condition(
                       The search will find trials related to any of the specified conditions.
                       Example: `['cancer', 'diabetes']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
     """
     try:
-        # Return full records by not restricting fields
+        # Always get full records from API, then filter
         result = api_client.search_studies(
             conditions=conditions,
             max_studies=max_studies,
-            fields=None
+            fields=fields
         )
         return result
     except Exception as e:
@@ -613,13 +499,13 @@ def search_trials_by_intervention(
                          The search will find trials related to any of the specified interventions.
                          Example: `['aspirin', 'chemotherapy']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
     """
     try:
         result = api_client.search_studies(
             interventions=interventions,
             max_studies=max_studies,
-            fields=None
+            fields=fields
         )
         return result
     except Exception as e:
@@ -642,13 +528,13 @@ def search_trials_by_sponsor(
                     The search will find trials sponsored by any of the specified organizations.
                     Example: `['National Cancer Institute', 'Pfizer']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
     """
     try:
         result = api_client.search_studies(
             sponsors=sponsors,
             max_studies=max_studies,
-            fields=None
+            fields=fields
         )
         return result
     except Exception as e:
@@ -672,8 +558,6 @@ def search_trials_by_acronym(
     Input:
       - `acronyms`: One or more acronyms to search for (e.g., ['TETON']).
       - `max_studies`: Maximum number of studies to request from the API.
-      - `fields`: Optional list of fields to return. The Acronym field will be
-                  included automatically to enable filtering.
       - `exact_match`: When true (default), matches acronyms exactly (case-insensitive).
                        When false, matches if any provided acronym is contained within
                        the study acronym (case-insensitive partial match).
@@ -725,14 +609,14 @@ def search_trials_by_nct_ids(
     Input:
       - `nct_ids`: A list of strings, where each string is an NCT ID to retrieve.
                    Example: `['NCT04280705', 'NCT04280718']`
-      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
     """
     try:
         result = api_client.search_studies(
             nct_ids=nct_ids,
-            fields=SEARCH_RESULT_FIELDS
+            fields=fields
         )
-        return {"studies": _summarize_studies(result.get("studies", []))}
+        return result
     except Exception as e:
         raise ToolError(f"Error retrieving trials by NCT IDs: {str(e)}")
 
@@ -760,7 +644,7 @@ def search_trials_combined(
       - `terms`: A list of general search terms.
       - `nct_ids`: A list of specific NCT IDs to include in the search.
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, a default set of fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
     """
     try:
         result = api_client.search_studies(
@@ -771,7 +655,7 @@ def search_trials_combined(
             titles=acronyms,
             nct_ids=nct_ids,
             max_studies=max_studies,
-            fields=None
+            fields=fields
         )
         return result
     except Exception as e:
@@ -796,7 +680,7 @@ def get_trial_details(
     try:
         result = api_client.get_study_by_id(
             nct_id=nct_id,
-            fields=fields  # Keep as-is - this is for detailed retrieval
+            fields=fields
         )
         return result
     except Exception as e:
@@ -822,13 +706,12 @@ def get_trial_details_batched(
             for i in range(0, len(seq), n):
                 yield seq[i:i+n]
 
-        requested_fields = fields or DEFAULT_STUDY_FIELDS
         all_studies: Dict[str, Any] = {}
 
         for part in chunk(nct_ids, batch_size):
             page = api_client.search_studies(
                 nct_ids=part,
-                fields=requested_fields,
+                fields=fields,
                 max_studies=len(part),
             )
             for study in page.get("studies", []):
@@ -949,7 +832,7 @@ def get_available_fields(
         else:
             result = {
                 "default_fields": DEFAULT_STUDY_FIELDS,
-                "minimal_fields": MINIMAL_STUDY_FIELDS,
+                "minimal_fields": SEARCH_RESULT_FIELDS,
                 "categories": AVAILABLE_FIELD_CATEGORIES
             }
         return result
