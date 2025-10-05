@@ -12,10 +12,12 @@ An MCP (Model Context Protocol) server that provides structured access to Clinic
 
 ## Installation
 
-1. Install dependencies:
+1. Install dependencies (Python runtime is required):
 ```bash
 pip install -r requirements.txt
 ```
+
+> **Note:** JavaScript package managers like `npm`, `pnpm`, or `bun` are not required for this project because all runtime dependencies are Python packages managed through `requirements.txt`.
 
 2. Run the MCP server:
 ```bash
