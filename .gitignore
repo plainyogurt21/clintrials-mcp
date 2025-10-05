@@ -3,3 +3,13 @@ __pycache__/
 .env
 .venv/
 node_modules/
+
+# AWS deployment files (contains credentials)
+AWS-DEPLOYMENT.md
+
+# AWS build artifacts
+lambda-build/
+lambda-deployment.zip
+
+# Cloudflare dev vars
+.dev.vars

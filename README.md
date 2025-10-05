@@ -24,42 +24,128 @@ pip install -r requirements.txt
 python mcp_server.py
 ```
 
-## Proxying the MCP server through Cloudflare Workers
+## Deployment Options
 
-If you deploy the bundled Cloudflare Worker (in `src/index.ts`) you can serve the MCP
-manifest directly from the Worker while proxying live tool traffic—including the
-`/sse` streaming endpoint—to a FastMCP backend. To enable this:
+### Option 1: AWS Lambda + Function URL (Recommended - FREE & Fastest)
 
-1. Run the Python FastMCP backend in HTTP mode (SSE enabled):
-   - Local: `npm run backend:http` (equivalent to `TRANSPORT=http PORT=8081 python mcp_server.py`)
-   - Docker: `docker build -t clintrials-mcp . && docker run -p 8081:8081 clintrials-mcp`
+**Cost:** FREE for first 1M requests/month, then $0.20 per 1M requests
+**Setup time:** 2 minutes
 
-2. Create a `.dev.vars` file for Wrangler local dev with your backend URL:
-   ```
-   FASTMCP_BASE_URL="http://127.0.0.1:8081"
+1. **Install AWS CLI and configure credentials:**
+   ```bash
+   aws configure
+   # Enter your AWS Access Key ID, Secret Key, and region
    ```
 
-3. Start the Worker locally and connect with an MCP client:
-   - Local Worker: `npm run cf:dev` (served at `http://localhost:8788`)
-   - Connect MCP Inspector to `http://localhost:8788/sse`
+2. **Deploy to Lambda:**
+   ```bash
+   ./deploy-lambda.sh
+   # Takes ~60 seconds, automatically creates function + public URL
+   ```
 
-4. Deploy to Cloudflare Workers:
-   - Login: `npx wrangler login`
-   - Set your production backend URL (publicly reachable) as a secret:
-     ```
-     npx wrangler secret put FASTMCP_BASE_URL
-     # paste e.g. https://your-backend.example.com
-     ```
-   - Deploy: `npm run cf:deploy`
+3. **Copy the Function URL and configure Cloudflare:**
+   ```bash
+   npx wrangler secret put BACKEND_URL
+   # Paste your Lambda Function URL when prompted
+   ```
 
-Once deployed, your remote MCP endpoint will be:
-`https://<worker-name>.<account>.workers.dev/sse`
+4. **Deploy Cloudflare Worker:**
+   ```bash
+   npx wrangler deploy
+   ```
 
-Notes:
-- The Worker serves `GET /` and `/manifest.json` from the repo’s `manifest.json`,
-  and proxies all other paths (including `/sse`) to your backend.
-- The `src/index.ts` proxy preserves streaming so SSE works end-to-end.
-- You can also use `FASTMCP_URL` or `BACKEND_URL` as alternative env names.
+Your MCP server will be available at: `https://<worker-name>.workers.dev/sse`
+
+**Pros:** Completely free tier, auto-scales, no server management
+**Cons:** Cold starts (~1-2s first request after idle)
+
+### Option 2: AWS App Runner (Always-on, Low Cost)
+
+**Cost:** ~$5/month for 1 vCPU + 2GB RAM (pay per use)
+**Setup time:** 5 minutes
+
+Use this if you need consistent performance without cold starts.
+
+See `deploy-apprunner.sh` for instructions or deploy via AWS Console.
+
+### Option 3: Railway (Easiest, No AWS Required)
+
+**Cost:** Free 500 hours/month, then $5/month
+**Setup time:** 3 minutes
+
+1. Sign up at [railway.app](https://railway.app)
+2. New Project → Deploy from GitHub → Select this repo
+3. Copy deployment URL
+4. `npx wrangler secret put BACKEND_URL` (paste Railway URL)
+5. `npx wrangler deploy`
+
+### Option 4: Render (Alternative to Railway)
+
+**Cost:** Free 750 hours/month, then $7/month
+
+Same process as Railway, uses `render.yaml` config.
+
+### Option 5: Local Development with Cloudflare Tunnel
+
+If you want to test locally while keeping everything fronted by Cloudflare:
+
+1. **Start Python backend locally:**
+   ```bash
+   npm run backend:http
+   # Listens on http://127.0.0.1:8081
+   ```
+
+2. **Create Cloudflare tunnel:**
+   ```bash
+   # Install cloudflared
+   brew install cloudflare/cloudflare/cloudflared  # macOS
+
+   # Create tunnel
+   cloudflared tunnel --url http://127.0.0.1:8081
+   # Copy the https://*.trycloudflare.com URL
+   ```
+
+3. **Configure Worker for local dev:**
+   Create `.dev.vars`:
+   ```
+   BACKEND_URL="https://your-tunnel.trycloudflare.com"
+   ```
+
+4. **Test locally:**
+   ```bash
+   npm run cf:dev
+   # Worker runs at http://localhost:8788
+   ```
+
+5. **Deploy to production:**
+   ```bash
+   npx wrangler secret put BACKEND_URL
+   # Paste your tunnel URL
+   npx wrangler deploy
+   ```
+
+### Architecture
+
+```
+MCP Client (Playground/Claude)
+        ↓
+Cloudflare Worker (proxy)
+        ↓
+Python FastMCP Backend (Lambda/App Runner/Railway/Render)
+        ↓
+ClinicalTrials.gov API
+```
+
+### Cost Comparison
+
+| Option | Free Tier | After Free Tier | Best For |
+|--------|-----------|-----------------|----------|
+| AWS Lambda | 1M requests/month | $0.20 per 1M | Personal use, low traffic |
+| AWS App Runner | None | ~$5/month | Production, no cold starts |
+| Railway | 500 hours/month | $5/month | Quick setup, no AWS |
+| Render | 750 hours/month | $7/month | Alternative to Railway |
+
+**Recommendation:** Start with AWS Lambda (completely free for most use cases)
 
 ### Fully Cloudflare entrypoint (keep Python) using Cloudflare Tunnel
 

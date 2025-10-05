@@ -3,8 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2024-10-05"
 
 [vars]
-# Add environment variables here if needed, for example:
-# API_BASE_URL = "https://clinicaltrials.gov/api/v2"
+# Set your FastMCP backend URL here
+# For local development, use a tunnel service like ngrok or cloudflared
+# BACKEND_URL = "https://your-backend-url.com"
 
 [dev]
 # Align local dev port with docs/examples

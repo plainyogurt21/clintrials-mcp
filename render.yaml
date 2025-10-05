@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: clintrials-mcp
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: TRANSPORT=http python mcp_server.py
+    envVars:
+      - key: TRANSPORT
+        value: http
+      - key: PORT
+        fromService:
+          type: web
+          name: clintrials-mcp
+          property: port
+    healthCheckPath: /healthz
