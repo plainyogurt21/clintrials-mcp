@@ -61,6 +61,51 @@ Notes:
 - The `src/index.ts` proxy preserves streaming so SSE works end-to-end.
 - You can also use `FASTMCP_URL` or `BACKEND_URL` as alternative env names.
 
+### Fully Cloudflare entrypoint (keep Python) using Cloudflare Tunnel
+
+If you want everything to be fronted and managed by Cloudflare while keeping the Python backend, use Cloudflare Tunnel to expose your local/server backend securely and set the Worker to proxy to it.
+
+1. Install and authenticate Cloudflared on the machine running your Python backend:
+   - macOS: `brew install cloudflare/cloudflare/cloudflared`
+   - Login: `cloudflared tunnel login`
+
+2. Quick dev tunnel (ephemeral URL):
+   - Start your backend: `npm run backend:http` (listens on `http://127.0.0.1:8081`)
+   - Open a tunnel: `cloudflared tunnel --url http://127.0.0.1:8081`
+   - Copy the printed `https://<random>.trycloudflare.com` and set it as your Worker secret:
+     ```
+     npx wrangler secret put FASTMCP_BASE_URL
+     # paste: https://<random>.trycloudflare.com
+     ```
+   - Deploy the Worker: `npm run cf:deploy`
+
+3. Stable tunnel with your domain (recommended):
+   - Create a named tunnel: `cloudflared tunnel create clintrials-mcp`
+   - Route DNS (replace `mcp.yourdomain.com` with a hostname in a Cloudflare-managed zone):
+     `cloudflared tunnel route dns clintrials-mcp mcp.yourdomain.com`
+   - Create `~/.cloudflared/config.yml` with:
+     ```yaml
+     tunnel: clintrials-mcp
+     credentials-file: /Users/<you>/.cloudflared/<tunnel-id>.json
+     ingress:
+       - hostname: mcp.yourdomain.com
+         service: http://127.0.0.1:8081
+       - service: http_status:404
+     ```
+   - Run it: `cloudflared tunnel run clintrials-mcp`
+   - Verify: `curl https://mcp.yourdomain.com/healthz` returns `{ "status": "ok" }`
+   - Set the Worker secret to your stable hostname:
+     ```
+     npx wrangler secret put FASTMCP_BASE_URL
+     # paste: https://mcp.yourdomain.com
+     ```
+   - Deploy: `npm run cf:deploy`
+
+Result:
+- Users and MCP clients connect only to Cloudflare (`workers.dev` or your domain).
+- The Worker proxies `/sse` and other API calls to your Python backend over the private tunnel, preserving SSE streams.
+- You keep your existing Python tools; no TypeScript porting required.
+
 ## Available Tools
 
 ### Search Tools

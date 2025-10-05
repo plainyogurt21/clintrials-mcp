@@ -51,7 +51,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/" || url.pathname === "/manifest.json") {
+    if ((url.pathname === "/" || url.pathname === "/manifest.json") && request.method === "GET") {
       return jsonResponse(manifest);
     }
 
