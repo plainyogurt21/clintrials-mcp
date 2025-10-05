@@ -24,6 +24,22 @@ pip install -r requirements.txt
 python mcp_server.py
 ```
 
+## Proxying the MCP server through Cloudflare Workers
+
+If you deploy the bundled Cloudflare Worker (in `src/index.ts`) you can serve the MCP
+manifest directly from the Worker while proxying live tool traffic—including the
+`/sse` streaming endpoint—to a FastMCP backend. To enable this:
+
+1. **Run the FastMCP backend** somewhere reachable from Cloudflare. The provided
+   Docker image starts the server in HTTP/SSE mode on port `8081`.
+2. **Expose the backend URL to the Worker** by setting the `FASTMCP_BASE_URL`
+   environment variable (or `FASTMCP_URL`/`BACKEND_URL`) in `wrangler.toml` or in
+   the Cloudflare dashboard. The value should be the base URL of your FastMCP
+   deployment, for example `https://fastmcp.example.com`.
+3. **Deploy the Worker**. Requests to `/manifest.json` and `/health` are served by
+   the Worker, while every other path is forwarded to the backend with streaming
+   preserved so `/sse` no longer returns a 404 or times out.
+
 ## Available Tools
 
 ### Search Tools
