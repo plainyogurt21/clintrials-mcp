@@ -30,15 +30,36 @@ If you deploy the bundled Cloudflare Worker (in `src/index.ts`) you can serve th
 manifest directly from the Worker while proxying live tool traffic—including the
 `/sse` streaming endpoint—to a FastMCP backend. To enable this:
 
-1. **Run the FastMCP backend** somewhere reachable from Cloudflare. The provided
-   Docker image starts the server in HTTP/SSE mode on port `8081`.
-2. **Expose the backend URL to the Worker** by setting the `FASTMCP_BASE_URL`
-   environment variable (or `FASTMCP_URL`/`BACKEND_URL`) in `wrangler.toml` or in
-   the Cloudflare dashboard. The value should be the base URL of your FastMCP
-   deployment, for example `https://fastmcp.example.com`.
-3. **Deploy the Worker**. Requests to `/manifest.json` and `/health` are served by
-   the Worker, while every other path is forwarded to the backend with streaming
-   preserved so `/sse` no longer returns a 404 or times out.
+1. Run the Python FastMCP backend in HTTP mode (SSE enabled):
+   - Local: `npm run backend:http` (equivalent to `TRANSPORT=http PORT=8081 python mcp_server.py`)
+   - Docker: `docker build -t clintrials-mcp . && docker run -p 8081:8081 clintrials-mcp`
+
+2. Create a `.dev.vars` file for Wrangler local dev with your backend URL:
+   ```
+   FASTMCP_BASE_URL="http://127.0.0.1:8081"
+   ```
+
+3. Start the Worker locally and connect with an MCP client:
+   - Local Worker: `npm run cf:dev` (served at `http://localhost:8788`)
+   - Connect MCP Inspector to `http://localhost:8788/sse`
+
+4. Deploy to Cloudflare Workers:
+   - Login: `npx wrangler login`
+   - Set your production backend URL (publicly reachable) as a secret:
+     ```
+     npx wrangler secret put FASTMCP_BASE_URL
+     # paste e.g. https://your-backend.example.com
+     ```
+   - Deploy: `npm run cf:deploy`
+
+Once deployed, your remote MCP endpoint will be:
+`https://<worker-name>.<account>.workers.dev/sse`
+
+Notes:
+- The Worker serves `GET /` and `/manifest.json` from the repo’s `manifest.json`,
+  and proxies all other paths (including `/sse`) to your backend.
+- The `src/index.ts` proxy preserves streaming so SSE works end-to-end.
+- You can also use `FASTMCP_URL` or `BACKEND_URL` as alternative env names.
 
 ## Available Tools
 

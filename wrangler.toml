@@ -5,3 +5,7 @@ compatibility_date = "2024-10-05"
 [vars]
 # Add environment variables here if needed, for example:
 # API_BASE_URL = "https://clinicaltrials.gov/api/v2"
+
+[dev]
+# Align local dev port with docs/examples
+port = 8788
