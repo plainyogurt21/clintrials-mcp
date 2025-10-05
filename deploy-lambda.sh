@@ -16,8 +16,8 @@ mkdir -p lambda-build
 # Use Docker to ensure compatibility with Lambda environment
 if command -v docker &> /dev/null; then
     echo "Using Docker to build Lambda-compatible dependencies..."
-    docker run --rm -v "$PWD":/var/task public.ecr.aws/lambda/python:3.11 \
-        pip install -r requirements-lambda.txt -t /var/task/lambda-build/
+    docker run --platform linux/amd64 --rm -v "$PWD":/var/task --entrypoint pip public.ecr.aws/lambda/python:3.11 \
+        install -r /var/task/requirements-lambda.txt -t /var/task/lambda-build/
 else
     echo "Docker not found. Installing dependencies locally (may not work on ARM Mac)..."
     echo "For best compatibility, install Docker and re-run this script."
@@ -123,7 +123,7 @@ if [ -n "$FUNCTION_URL" ]; then
     echo "✅ Deployment complete!"
     echo ""
     echo "Function URL: $FUNCTION_URL"
-    echo "MCP Endpoint: ${FUNCTION_URL}sse"
+    echo "MCP Endpoint: ${FUNCTION_URL}mcp"
     echo ""
     echo "Next steps:"
     echo "1. Test: curl ${FUNCTION_URL}healthz"
