@@ -39,12 +39,14 @@
   "mcp": {
     "server": {
       "command": "python",
-      "args": ["mcp_server.py"],
+      "args": [
+        "mcp_server.py"
+      ],
       "env": {}
     },
     "tools": [
       "search_trials_by_condition",
-      "search_trials_by_intervention", 
+      "search_trials_by_intervention",
       "search_trials_by_sponsor",
       "search_trials_by_nct_ids",
       "search_trials_combined",
@@ -61,5 +63,8 @@
     "clinicaltrials.dxt",
     "bin/",
     "setup.py"
-  ]
+  ],
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241011.0"
+  }
 }
