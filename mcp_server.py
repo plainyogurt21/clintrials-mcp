@@ -93,6 +93,36 @@ AVAILABLE_FIELD_CATEGORIES = {
     }
 }
 
+# Tool-specific field defaults
+# These constants define optimized field sets for different use cases
+
+# SEARCH_TOOL_DEFAULTS: Used by search tools for lightweight discovery
+# Contains 9 essential fields for quickly scanning and filtering trials
+SEARCH_TOOL_DEFAULTS = [
+    "NCTId", "BriefTitle", "Acronym", "Condition", "Phase",
+    "InterventionName", "LeadSponsorName", "OverallStatus", "HasResults"
+]
+
+# DETAIL_TOOL_DEFAULTS: Used by detail retrieval tools for comprehensive analysis
+# Contains 25 fields covering all major aspects of a trial for in-depth review
+DETAIL_TOOL_DEFAULTS = [
+    "NCTId", "BriefTitle", "OfficialTitle", "Acronym",
+    "Condition", "Keyword", "Phase", "OverallStatus",
+    "InterventionType", "InterventionName", "InterventionDescription",
+    "ArmGroupLabel", "ArmGroupType", "ArmGroupDescription",
+    "EligibilityCriteria", "MinimumAge", "MaximumAge", "Sex",
+    "PrimaryOutcomeMeasure", "SecondaryOutcomeMeasure",
+    "BriefSummary", "LocationFacility", "LocationCountry",
+    "LeadSponsorName", "CollaboratorName", "HasResults"
+]
+
+# ACRONYM_SEARCH_DEFAULTS: Used by acronym search for acronym-focused discovery
+# Contains 8 fields optimized for identifying trials by their acronyms
+ACRONYM_SEARCH_DEFAULTS = [
+    "NCTId", "BriefTitle", "Acronym", "Condition",
+    "InterventionName", "Phase", "LeadSponsorName", "HasResults"
+]
+
 
 class ClinicalTrialsAPI:
     """Client for ClinicalTrials.gov API v2"""
@@ -467,20 +497,22 @@ def search_trials_by_condition(
     Search clinical trials by medical condition(s).
 
     This tool allows you to search for clinical trials based on a list of medical conditions.
-    
+
     Input:
-      - `conditions`: A list of strings, where each string is a medical condition to search for. 
+      - `conditions`: A list of strings, where each string is a medical condition to search for.
                       The search will find trials related to any of the specified conditions.
                       Example: `['cancer', 'diabetes']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  SEARCH_TOOL_DEFAULTS (9 essential fields: NCTId, BriefTitle, Acronym, Condition,
+                  Phase, InterventionName, LeadSponsorName, OverallStatus, HasResults).
     """
     try:
         # Always get full records from API, then filter
         result = api_client.search_studies(
             conditions=conditions,
             max_studies=max_studies,
-            fields=fields
+            fields=fields if fields is not None else SEARCH_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -503,13 +535,15 @@ def search_trials_by_intervention(
                          The search will find trials related to any of the specified interventions.
                          Example: `['aspirin', 'chemotherapy']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  SEARCH_TOOL_DEFAULTS (9 essential fields: NCTId, BriefTitle, Acronym, Condition,
+                  Phase, InterventionName, LeadSponsorName, OverallStatus, HasResults).
     """
     try:
         result = api_client.search_studies(
             interventions=interventions,
             max_studies=max_studies,
-            fields=fields
+            fields=fields if fields is not None else SEARCH_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -532,13 +566,15 @@ def search_trials_by_sponsor(
                     The search will find trials sponsored by any of the specified organizations.
                     Example: `['National Cancer Institute', 'Pfizer']`
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  SEARCH_TOOL_DEFAULTS (9 essential fields: NCTId, BriefTitle, Acronym, Condition,
+                  Phase, InterventionName, LeadSponsorName, OverallStatus, HasResults).
     """
     try:
         result = api_client.search_studies(
             sponsors=sponsors,
             max_studies=max_studies,
-            fields=fields
+            fields=fields if fields is not None else SEARCH_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -550,6 +586,7 @@ def search_trials_by_acronym(
     acronyms: Annotated[List[str], Field(description="Trial acronyms to search for, e.g., ['TETON']")],
     max_studies: Annotated[int, Field(ge=1, le=1000, description="Maximum number of studies to return")] = 50,
     exact_match: Annotated[bool, Field(description="If true, match acronym exactly; if false, allow partial matches")]=True,
+    fields: Annotated[Optional[List[str]], Field(description="Specific fields to return")] = None
 ) -> Dict[str, Any]:
     """
     Search clinical trials by study acronym.
@@ -565,6 +602,9 @@ def search_trials_by_acronym(
       - `exact_match`: When true (default), matches acronyms exactly (case-insensitive).
                        When false, matches if any provided acronym is contained within
                        the study acronym (case-insensitive partial match).
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  ACRONYM_SEARCH_DEFAULTS (8 fields optimized for acronym discovery: NCTId,
+                  BriefTitle, Acronym, Condition, InterventionName, Phase, LeadSponsorName, HasResults).
     """
     try:
         # Request full records; filter locally by acronym
@@ -594,8 +634,11 @@ def search_trials_by_acronym(
                 if any(t in acr_l for t in targets):
                     filtered.append(study)
 
-        # Return filtered full studies
-        return {"studies": filtered}
+        # Apply field filtering to acronym-matched results
+        effective_fields = fields if fields is not None else ACRONYM_SEARCH_DEFAULTS
+        filtered_studies = api_client.parse_specific_fields(filtered, effective_fields)
+
+        return {"studies": filtered_studies}
     except Exception as e:
         raise ToolError(f"Error searching trials by acronym: {str(e)}")
 
@@ -613,12 +656,14 @@ def search_trials_by_nct_ids(
     Input:
       - `nct_ids`: A list of strings, where each string is an NCT ID to retrieve.
                    Example: `['NCT04280705', 'NCT04280718']`
-      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  SEARCH_TOOL_DEFAULTS (9 essential fields: NCTId, BriefTitle, Acronym, Condition,
+                  Phase, InterventionName, LeadSponsorName, OverallStatus, HasResults).
     """
     try:
         result = api_client.search_studies(
             nct_ids=nct_ids,
-            fields=fields
+            fields=fields if fields is not None else SEARCH_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -648,7 +693,9 @@ def search_trials_combined(
       - `terms`: A list of general search terms.
       - `nct_ids`: A list of specific NCT IDs to include in the search.
       - `max_studies`: The maximum number of studies to return. Defaults to 50.
-      - `fields`: A list of specific fields to return in the results. If not provided, all fields will be returned.
+      - `fields`: A list of specific fields to return in the results. If not provided, returns
+                  SEARCH_TOOL_DEFAULTS (9 essential fields: NCTId, BriefTitle, Acronym, Condition,
+                  Phase, InterventionName, LeadSponsorName, OverallStatus, HasResults).
     """
     try:
         result = api_client.search_studies(
@@ -659,7 +706,7 @@ def search_trials_combined(
             titles=acronyms,
             nct_ids=nct_ids,
             max_studies=max_studies,
-            fields=fields
+            fields=fields if fields is not None else SEARCH_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -679,12 +726,17 @@ def get_trial_details(
     Input:
       - `nct_id`: The NCT ID of the trial to retrieve.
                   Example: `'NCT04280705'`
-      - `fields`: A list of specific fields to return. If not provided, all available fields will be returned.
+      - `fields`: A list of specific fields to return. If not provided, returns DETAIL_TOOL_DEFAULTS
+                  (25 comprehensive fields covering: NCTId, BriefTitle, OfficialTitle, Acronym, Condition,
+                  Keyword, Phase, OverallStatus, InterventionType, InterventionName, InterventionDescription,
+                  ArmGroupLabel, ArmGroupType, ArmGroupDescription, EligibilityCriteria, MinimumAge, MaximumAge,
+                  Sex, PrimaryOutcomeMeasure, SecondaryOutcomeMeasure, BriefSummary, LocationFacility,
+                  LocationCountry, LeadSponsorName, CollaboratorName, HasResults).
     """
     try:
         result = api_client.get_study_by_id(
             nct_id=nct_id,
-            fields=fields
+            fields=fields if fields is not None else DETAIL_TOOL_DEFAULTS
         )
         return result
     except Exception as e:
@@ -700,9 +752,19 @@ def get_trial_details_batched(
     """
     Retrieve detailed clinical trial records in batches to reduce payload during discovery.
 
-    - Accepts a list of NCT IDs and fetches details in batches (default 10).
-    - Preserves the order of input NCT IDs in the returned list.
-    - Use this after search tools which return a minimal field set.
+    Accepts a list of NCT IDs and fetches details in batches (default 10).
+    Preserves the order of input NCT IDs in the returned list.
+    Use this after search tools which return a minimal field set.
+
+    Input:
+      - `nct_ids`: List of NCT IDs to retrieve in batches.
+      - `fields`: Specific fields to return. If not provided, returns DETAIL_TOOL_DEFAULTS
+                  (25 comprehensive fields covering: NCTId, BriefTitle, OfficialTitle, Acronym, Condition,
+                  Keyword, Phase, OverallStatus, InterventionType, InterventionName, InterventionDescription,
+                  ArmGroupLabel, ArmGroupType, ArmGroupDescription, EligibilityCriteria, MinimumAge, MaximumAge,
+                  Sex, PrimaryOutcomeMeasure, SecondaryOutcomeMeasure, BriefSummary, LocationFacility,
+                  LocationCountry, LeadSponsorName, CollaboratorName, HasResults).
+      - `batch_size`: Number of trials to fetch per API call (default 10).
     """
     try:
         # Prepare chunks
@@ -715,7 +777,7 @@ def get_trial_details_batched(
         for part in chunk(nct_ids, batch_size):
             page = api_client.search_studies(
                 nct_ids=part,
-                fields=fields,
+                fields=fields if fields is not None else DETAIL_TOOL_DEFAULTS,
                 max_studies=len(part),
             )
             for study in page.get("studies", []):
