@@ -1,4 +1,5 @@
 # Clinical Trials MCP Server
+[![smithery badge](https://smithery.ai/badge/@plainyogurt21/clintrials-mcp)](https://smithery.ai/server/@plainyogurt21/clintrials-mcp)
 
 An MCP (Model Context Protocol) server that provides structured access to ClinicalTrials.gov data, allowing LLMs to search, retrieve, and analyze clinical trial information.
 
@@ -11,6 +12,14 @@ An MCP (Model Context Protocol) server that provides structured access to Clinic
 - **Error Handling**: Robust error handling with meaningful error messages
 
 ## Installation
+
+### Installing via Smithery
+
+To install Clinical Trials Data Server automatically via [Smithery](https://smithery.ai/server/@plainyogurt21/clintrials-mcp):
+
+```bash
+npx -y @smithery/cli install @plainyogurt21/clintrials-mcp
+```
 
 1. Install dependencies (Python runtime is required):
 ```bash
